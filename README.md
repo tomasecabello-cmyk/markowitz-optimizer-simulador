@@ -6,7 +6,7 @@ Inspirado en el proyecto _"Optimizador de Portfolios con Markowitz e IA"_.
 
 **Autores:** Tomás Emanuel Cabello · Lola Belén Lombardi
 
-**Repositorio:** https://github.com/tomasecabello-cmyk/markowitz-optimizer-simulador (privado)
+**Repositorio:** https://github.com/tomasecabello-cmyk/markowitz-optimizer-simulador
 
 Entrada: tus posiciones (ticker + tipo de mercado + monto). Salida: frontera
 eficiente, cartera de máximo Sharpe, matriz de correlación, score de riesgo en 10
