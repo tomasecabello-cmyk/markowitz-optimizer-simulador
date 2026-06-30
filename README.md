@@ -6,13 +6,48 @@ Inspirado en el proyecto _"Optimizador de Portfolios con Markowitz e IA"_.
 
 **Autores:** Tomás Emanuel Cabello · Lola Belén Lombardi
 
-**Repositorio:** https://github.com/tomasecabello-cmyk/markowitz-optimizer (privado)
-
-![CI](https://github.com/tomasecabello-cmyk/markowitz-optimizer/actions/workflows/ci.yml/badge.svg)
+**Repositorio:** https://github.com/tomasecabello-cmyk/markowitz-optimizer-simulador (privado)
 
 Entrada: tus posiciones (ticker + tipo de mercado + monto). Salida: frontera
 eficiente, cartera de máximo Sharpe, matriz de correlación, score de riesgo en 10
 dimensiones, propuesta de rebalanceo y un informe con IA.
+
+## Inicio rápido (correrlo en el simulador / tu máquina)
+
+Necesitás **Python 3.11+** y **salida a internet** (la app baja datos de mercado en vivo).
+Probado de punta a punta: 36 tests en verde, smoke OK y la app levanta en `http://127.0.0.1:8000`.
+
+```bash
+# 1. Clonar
+git clone https://github.com/tomasecabello-cmyk/markowitz-optimizer-simulador.git
+cd markowitz-optimizer-simulador
+
+# 2. Entorno virtual + dependencias
+python -m venv .venv
+# Windows:        .\.venv\Scripts\activate
+# Linux / macOS:  source .venv/bin/activate
+pip install -e ".[dev]"
+
+# 3. (opcional) verificar que todo anda, sin necesidad de internet
+python scripts/smoke.py      # debe imprimir "SMOKE PASS"
+pytest -q                    # 36 tests en verde
+
+# 4. Levantar la app
+python -m uvicorn markowitz_optimizer.api.main:app --port 8000
+```
+
+Abrí **http://127.0.0.1:8000** en el navegador. La doc interactiva de la API
+(Swagger) queda en **http://127.0.0.1:8000/docs**.
+
+- **No hace falta ninguna API key para correrlo.** Sin `ANTHROPIC_API_KEY`, el
+  informe con IA usa un **mock determinístico** con el mismo formato; todo lo demás
+  (Markowitz, riesgo, rebalanceo) funciona igual con datos reales.
+- En **Windows** podés además hacer doble-click a `run.cmd` (levanta el server y abre
+  el navegador solo).
+- Si vas a correrlo en un servidor/simulador detrás de proxy, asegurate de permitir
+  salida HTTPS a: `yfinance`, `data912`, `rava`, `byma`, `argentinadatos`.
+
+> Demo educativo. **No es asesoramiento financiero.**
 
 ### Fuentes de datos (híbrido ARG + US)
 
@@ -36,8 +71,6 @@ dimensiones, propuesta de rebalanceo y un informe con IA.
   ARG no quedan inflados por la devaluación del peso. Se puede desactivar; en ese
   caso se avisa que la comparación queda en moneda nativa.
 
-> Demo educativo. **No es asesoramiento financiero.**
-
 ## Arquitectura
 
 ```
@@ -55,31 +88,27 @@ scripts/smoke.py         # test del pipeline sin red (datos sintéticos)
 Flujo: `holdings → datos de mercado → Markowitz → framework de riesgo → IA`.
 Cada capa es independiente; la IA **interpreta** los números, no los recalcula.
 
-## Setup (Windows PowerShell)
+## Activar la IA real (opcional)
 
-```powershell
-cd C:\Users\maria\markowitz-optimizer
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -e ".[dev]"
+El optimizador corre completo sin ninguna key (la IA cae a un mock determinístico).
+Para que el informe lo escriba Claude de verdad:
 
-copy .env.example .env      # opcional: pegá tu ANTHROPIC_API_KEY para IA real
+```bash
+cp .env.example .env        # Windows: copy .env.example .env
+# editá .env y pegá tu ANTHROPIC_API_KEY=...
 ```
 
-Sin `ANTHROPIC_API_KEY`, el análisis con IA usa un **mock determinístico** (mismo
-formato) para que el demo corra igual.
+Modelo por defecto: `claude-opus-4-8` (configurable con `ANTHROPIC_MODEL`).
 
-## Correr
+## Otras formas de correrlo
 
 ```powershell
-# Opción 1 (recomendada para demo): doble-click a run.cmd, o desde la terminal:
+# Windows, doble-click o desde la terminal (levanta server + abre navegador):
 .\run.cmd
-# (run.cmd evita el bloqueo de scripts de PowerShell; abre el navegador solo)
-
-# Si preferís el .ps1 directo y PowerShell lo bloquea, usá:
+# Si PowerShell bloquea el .ps1:
 powershell -ExecutionPolicy Bypass -File .\run.ps1
 
-# Opción 2 (manual): backend + frontend en http://127.0.0.1:8000 (Swagger en /docs)
+# Modo desarrollo con auto-reload:
 python -m uvicorn markowitz_optimizer.api.main:app --reload
 ```
 
@@ -110,7 +139,7 @@ usarlo y disparar las llamadas externas (y la IA, si hay key).
 
 ```powershell
 python scripts/smoke.py        # pipeline matemático sin red (exit 0 = PASS)
-python -m pytest -q            # si agregás tests bajo tests/
+python -m pytest -q            # suite completa (36 tests)
 ```
 
 ## API
