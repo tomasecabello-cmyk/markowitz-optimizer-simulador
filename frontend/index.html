@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Optimizador de Carteras · Markowitz + IA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <div>
+        <div class="brand-title">Optimizador de Carteras</div>
+        <div class="brand-sub">Frontera Eficiente de Markowitz · Análisis de Riesgo con IA</div>
+        <div class="brand-authors">
+          por
+          <a class="author-link" href="https://www.linkedin.com/in/tomas-emanuel-cabello-98a922255" target="_blank" rel="noopener" title="LinkedIn de Tomás Emanuel Cabello">
+            <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
+            Tomás Emanuel Cabello
+          </a>
+          <span class="sep">·</span>
+          <a class="author-link" href="https://www.linkedin.com/in/lola-lombardi-a46a52310" target="_blank" rel="noopener" title="LinkedIn de Lola Belén Lombardi">
+            <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
+            Lola Belén Lombardi
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="topbar-tag">FINANZAS CUANTITATIVAS</div>
+  </header>
+
+  <main class="layout">
+    <!-- Panel de entrada -->
+    <section class="panel input-panel">
+      <h2>Cartera</h2>
+      <p class="hint">1) Elegí la categoría. 2) Buscá el activo en su universo. 3) Poné el monto y agregalo. Mínimo 2 activos con histórico.</p>
+
+      <div class="add-form">
+        <label class="af-field">Categoría
+          <select id="cat"></select>
+        </label>
+        <label class="af-field grow">Activo
+          <div class="combo">
+            <input id="ticker-pick" placeholder="Buscá un ticker…" autocomplete="off" />
+            <div id="combo-panel" class="combo-panel hidden"></div>
+          </div>
+        </label>
+        <label class="af-field">Monto
+          <input id="amount" type="number" placeholder="0" min="0" />
+        </label>
+        <button id="add-pos" class="btn secondary af-btn">+ Agregar</button>
+      </div>
+      <div id="universe-status" class="universe-status"></div>
+
+      <div class="quick-add">
+        <span>Sumar rápido:</span>
+        <button class="chip" data-add="us" data-tickers="BIL,SHY,IEF,TLT">Treasuries US</button>
+        <button class="chip" data-add="us" data-tickers="SPY,QQQ,GLD">Índices US</button>
+        <button class="chip" data-add="arg_bond" data-tickers="AL30,GD30,AE38">Bonos soberanos ARG</button>
+        <button class="chip" data-add="arg_stock" data-tickers="GGAL,YPFD,PAMP">Acciones ARG</button>
+      </div>
+
+      <div id="positions" class="positions"></div>
+
+      <div class="controls">
+        <label>Ventana histórica
+          <select id="period">
+            <option value="1y">1 año</option>
+            <option value="3y" selected>3 años</option>
+            <option value="5y">5 años</option>
+            <option value="max">Máx</option>
+          </select>
+        </label>
+        <label class="rf-field">Tasa libre de riesgo
+          <div class="rf-input">
+            <input id="rf" type="number" min="0" max="20" step="0.01" />
+            <span class="suffix">%</span>
+          </div>
+          <small id="rf-source" class="rf-source">cargando tasa en vivo…</small>
+        </label>
+        <label class="rf-field">Máx por activo (óptimo)
+          <div class="rf-input">
+            <input id="max-weight" type="number" min="5" max="100" step="5" placeholder="sin tope" />
+            <span class="suffix">%</span>
+          </div>
+          <small class="rf-source">Tope para la cartera óptima sugerida. No afecta tu cartera actual.</small>
+        </label>
+        <label class="rf-field">Retorno esperado μ
+          <select id="return-method">
+            <option value="black_litterman" selected>Black-Litterman</option>
+            <option value="historical">Media histórica</option>
+          </select>
+          <small class="rf-source">BL regulariza la media histórica hacia un prior de equilibrio (más estable).</small>
+        </label>
+        <label class="rf-field">Normalizar a USD
+          <div class="norm-input">
+            <input id="normalize" type="checkbox" checked />
+            <select id="fx-kind">
+              <option value="ccl" selected>CCL</option>
+              <option value="mep">MEP</option>
+              <option value="blue">Blue</option>
+              <option value="oficial">Oficial</option>
+            </select>
+          </div>
+          <small class="rf-source">Convierte activos ARS a USD (FX histórico).</small>
+        </label>
+        <label class="check">
+          <input id="run-ai" type="checkbox" checked /> Análisis con IA
+        </label>
+      </div>
+
+      <button id="analyze" class="btn primary">Analizar cartera</button>
+      <div id="status" class="status"></div>
+    </section>
+
+    <!-- Resultados -->
+    <section id="results" class="results hidden">
+      <!-- Avisos -->
+      <div id="warnings" class="warnings"></div>
+
+      <!-- Tarjetas resumen -->
+      <div class="cards" id="summary-cards"></div>
+
+      <!-- Risk score + frontera -->
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Score de Riesgo</h3>
+          <div id="risk-gauge" class="chart"></div>
+          <div id="risk-band" class="risk-band"></div>
+        </div>
+        <div class="panel">
+          <h3>Frontera Eficiente</h3>
+          <div id="frontier" class="chart tall"></div>
+        </div>
+      </div>
+
+      <!-- Allocations + correlación -->
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Allocations: Actual vs Óptimo (Max Sharpe)</h3>
+          <div id="allocations" class="chart tall"></div>
+        </div>
+        <div class="panel">
+          <h3>Matriz de Correlación</h3>
+          <div id="correlation" class="chart tall"></div>
+        </div>
+      </div>
+
+      <!-- Rebalanceo en $ -->
+      <div class="panel">
+        <h3>Rebalanceo sugerido · hacia Máx Sharpe</h3>
+        <p class="hint">Cuánto comprar/vender por activo para pasar de tu cartera a la óptima. Montos en <span id="rebal-ccy">USD</span>.</p>
+        <div id="rebal-table"></div>
+      </div>
+
+      <!-- Backtest -->
+      <div class="panel">
+        <h3>Backtest · cómo habría rendido (base 100)</h3>
+        <p class="hint" id="backtest-note"></p>
+        <div id="backtest" class="chart tall"></div>
+        <div id="backtest-metrics"></div>
+      </div>
+
+      <!-- Framework de riesgo -->
+      <div class="panel">
+        <h3>Framework de Riesgo · 10 Dimensiones</h3>
+        <div id="risk-dims" class="risk-grid"></div>
+      </div>
+
+      <!-- Diagnóstico de supuestos -->
+      <div id="diagnostics-panel" class="panel hidden">
+        <h3>Diagnóstico de Supuestos</h3>
+        <p class="hint">Tests sobre los retornos: ¿son normales, independientes, un random walk, sin volatility clustering? Validan la anualización, el Sharpe y el VaR antes de creerles.</p>
+        <div id="diag-body"></div>
+      </div>
+
+      <!-- Info de ONs (BYMA) -->
+      <div id="on-panel" class="panel hidden">
+        <h3>Obligaciones Negociables (ONs) · datos en vivo BYMA</h3>
+        <p class="hint">Info de mercado de tus ONs. Sin histórico gratuito no entran al optimizador (configurá PPI para incluirlas).</p>
+        <div id="on-table"></div>
+      </div>
+
+      <!-- Análisis IA -->
+      <div class="panel ai-panel">
+        <h3>Análisis con IA <span id="ai-badge" class="badge"></span></h3>
+        <div id="ai-report"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-authors">
+      Creado por
+      <a class="author-link" href="https://www.linkedin.com/in/tomas-emanuel-cabello-98a922255" target="_blank" rel="noopener" title="LinkedIn de Tomás Emanuel Cabello">
+        <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
+        Tomás Emanuel Cabello
+      </a>
+      <span class="sep">·</span>
+      <a class="author-link" href="https://www.linkedin.com/in/lola-lombardi-a46a52310" target="_blank" rel="noopener" title="LinkedIn de Lola Belén Lombardi">
+        <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
+        Lola Belén Lombardi
+      </a>
+    </div>
+    <div>&copy; <span id="footer-year"></span> · Optimización de Portfolios con Markowitz e IA · Demo educativo, no es asesoramiento financiero.</div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

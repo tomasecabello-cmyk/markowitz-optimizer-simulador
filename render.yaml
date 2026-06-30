@@ -1,0 +1,16 @@
+# Blueprint de Render (deploy de un click desde el repo).
+# En Render: New → Blueprint → conectá este repo → Apply.
+# Construye la imagen del Dockerfile en la nube y publica una URL pública.
+services:
+  - type: web
+    name: markowitz-optimizer
+    runtime: docker
+    plan: free                 # gratis (se "duerme" tras 15 min de inactividad; 1er request ~50s)
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true           # redeploy automático en cada push a master
+    envVars:
+      # Opcional: pegá tu clave para activar la IA real. Sin esto, usa el mock.
+      - key: ANTHROPIC_API_KEY
+        sync: false
